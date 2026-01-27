@@ -15,7 +15,9 @@ from app.db_models import Station, Train
 from services.crowd_service import CrowdService
 from services.train_service import TrainService
 from app.db_session import SessionLocal
-from app.db_models import Station
+# from app.db_models import Station
+from app.database import engine, Base
+from app import db_models  # IMPORTANT: ensures models are registered
 
 
 # Background task storage
@@ -28,6 +30,9 @@ background_tasks = set()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚂 Starting MahaKavach Backend (PostgreSQL mode)...")
+
+    print("📦 Creating database tables (if not exist)...")
+    Base.metadata.create_all(bind=engine)
 
     # Initialize services
     state.crowd_service = CrowdService()
