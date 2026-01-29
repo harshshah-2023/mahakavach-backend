@@ -12,6 +12,9 @@ from app.models import (
 from app.state import crowd_state
 
 
+
+
+
 class CrowdService:
     """Service for crowd prediction and management (mock + user signals)"""
 
@@ -129,26 +132,134 @@ class CrowdService:
             crowd_state[station_id] = self.generate_mock_crowd_for_station(station_id)
         return crowd_state[station_id]
 
-    def get_train_crowd(self, train_no: str, station_code: Optional[str] = None) -> Dict:
+# fixing the train problem
+    # def get_train_crowd(self, train_no: str, station_code: Optional[str] = None) -> Dict:
+    #     coaches = {}
+    #     for coach in self.coaches:
+    #         coaches[coach] = {
+    #             "density": random.choice(self.density_levels),
+    #             "trend": self._random_trend(),
+    #             "confidence": round(random.uniform(0.6, 0.9), 2),
+    #             "last_updated": datetime.utcnow().isoformat(),
+    #             "user_reports_count": random.randint(0, 10),
+    #             "source": DataSource.MOCK
+    #         }
+
+    #     return {
+    #         "train_no": train_no,
+    #         "station_code": station_code,
+    #         "timestamp": datetime.utcnow().isoformat(),
+    #         "overall_density": self._average_density(coaches),
+    #         "coaches": coaches,
+    #         "source": DataSource.MOCK
+    #     }
+    # def get_train_crowd(self, train_no: str, station: str) -> dict:
+    # coaches = {}
+    # for c in self.coaches:
+    #     coaches[c] = {
+    #         "density": random.choice(self.density_levels),
+    #         "trend": self._random_trend(),
+    #         "confidence": round(random.uniform(0.6, 0.9), 2),
+    #         "source": DataSource.MOCK
+    #     }
+
+    # return {
+    #     "train_no": train_no,
+    #     "station": station,
+    #     "overall_density": self._average_density(coaches),
+    #     "coaches": coaches
+    # }
+        # def get_train_crowd(self, train_no: str, station: str) -> Dict:
+        #     """Mock crowd data for a specific train at a station"""
+
+        # coaches = {}
+
+        # for coach in self.coaches:
+        #     coaches[coach] = {
+        #         "density": random.choice(self.density_levels),
+        #         "trend": self._random_trend(),
+        #         "confidence": round(random.uniform(0.6, 0.9), 2),
+        #         "last_updated": datetime.utcnow().isoformat(),
+        #         "user_reports_count": 0,
+        #         "source": DataSource.MOCK
+        #     }
+
+        # return {
+        #     "train_no": train_no,
+        #     "station": station,
+        #     "timestamp": datetime.utcnow().isoformat(),
+        #     "overall_density": self._average_density(coaches),
+        #     "coaches": coaches,
+        #     "source": DataSource.MOCK
+        # }
+    def get_train_crowd(self, train_no: str, station: Optional[str] = None) -> Dict:
+        """
+        Aggregate coach-level crowd data into a train-level crowd signal.
+        """
+
+    # ---- MOCK coach crowd (for now) ----
         coaches = {}
+
         for coach in self.coaches:
-            coaches[coach] = {
+             coaches[coach] = {
                 "density": random.choice(self.density_levels),
                 "trend": self._random_trend(),
                 "confidence": round(random.uniform(0.6, 0.9), 2),
                 "last_updated": datetime.utcnow().isoformat(),
-                "user_reports_count": random.randint(0, 10),
+                "user_reports_count": 0,
                 "source": DataSource.MOCK
+        }
+
+    # ---- Aggregate LEVEL ----
+        weights = {
+                CrowdDensityLevel.VERY_LOW: 1,
+                CrowdDensityLevel.LOW: 2,
+                CrowdDensityLevel.MEDIUM: 3,
+                CrowdDensityLevel.HIGH: 4,
+                CrowdDensityLevel.VERY_HIGH: 5
             }
 
+        total_score = sum(weights[c["density"]] for c in coaches.values())
+        avg_score = total_score / len(coaches)
+
+        if avg_score < 1.5:
+            level = CrowdDensityLevel.VERY_LOW
+        elif avg_score < 2.5:
+            level = CrowdDensityLevel.LOW
+        elif avg_score < 3.5:
+            level = CrowdDensityLevel.MEDIUM
+        elif avg_score < 4.5:
+            level = CrowdDensityLevel.HIGH
+        else:
+            level = CrowdDensityLevel.VERY_HIGH
+
+        # ---- Aggregate TREND ----
+        trend_score = 0
+        for c in coaches.values():
+            if c["trend"] == TrendDirection.INCREASING:
+                trend_score += 1
+            elif c["trend"] == TrendDirection.DECREASING:
+                trend_score -= 1
+
+        if trend_score > 0:
+            trend = TrendDirection.INCREASING
+        elif trend_score < 0:
+            trend = TrendDirection.DECREASING
+        else:
+            trend = TrendDirection.STABLE
+
+        # ---- Final train-level crowd ----
         return {
             "train_no": train_no,
-            "station_code": station_code,
+            "station": station,
             "timestamp": datetime.utcnow().isoformat(),
-            "overall_density": self._average_density(coaches),
-            "coaches": coaches,
+            "level": level,          # 👈 train crowd level
+            "trend": trend,          # 👈 train crowd trend
+            "coaches": coaches,      # 👈 keep coach data for drill-down
             "source": DataSource.MOCK
-        }
+         }
+
+
 
     # ------------------------------------------------------------------
     # User signals

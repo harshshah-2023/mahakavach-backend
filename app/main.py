@@ -147,6 +147,8 @@ def get_trains_at_station(
     window_minutes: int = Query(30, ge=5, le=180),
     db=Depends(get_db)
 ):
+# //fixing train problem 
+
     query_time = (
         datetime.strptime(time, "%H:%M").time()
         if time else datetime.now().time()
@@ -158,7 +160,13 @@ def get_trains_at_station(
         time=query_time,
         window_minutes=window_minutes
     )
+    for t in trains["trains"]:
+        t["crowd"] = state.crowd_service.get_train_crowd(
+            train_no=t["train_no"],
+            station=station_name
+        )
 
+    return trains
 # =============================================================================
 # LIVE STATION VIEW
 # =============================================================================
