@@ -167,6 +167,29 @@ def get_trains_at_station(
         )
 
     return trains
+
+
+@app.get("/api/v1/stations/{station_code}/crowd")
+def get_station_crowd(station_code: str):
+    crowd = state.crowd_service.get_station_crowd(station_code)
+
+    if not crowd:
+        return {
+            "station": station_code,
+            "overall_density": "UNKNOWN",
+            "timestamp": None
+        }
+
+    overall = crowd.get("overall_density")
+
+    return {
+        "station": station_code,
+        "overall_density": (
+            overall.name if hasattr(overall, "name") else overall
+        ),
+        "timestamp": crowd.get("timestamp")
+    }
+
 # =============================================================================
 # LIVE STATION VIEW
 # =============================================================================
