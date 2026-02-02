@@ -155,7 +155,8 @@ def get_trains_at_station(
     )
 
     service = TrainService(db)
-    return service.get_trains_at_station(
+    
+    trains = service.get_trains_at_station(
         station=station_name,
         time=query_time,
         window_minutes=window_minutes
